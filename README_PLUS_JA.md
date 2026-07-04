@@ -31,7 +31,11 @@ tag_a,tag_b,count
 
 ## Danbooru CSV の自動取得
 
-初回起動時に `danbooru_tags.csv` と `danbooru_tags_cooccurrence.csv` がない場合、Hugging Face の `newtextdoc1111/danbooru-tag-csv` から自動で取得します。
+`danbooru_tags_cooccurrence.csv` は GitHub の通常ファイル上限に近いサイズなので、リポジトリには `danbooru_tags_cooccurrence.csv.gz` として同梱しています。
+
+初回起動時に `danbooru_tags_cooccurrence.csv` がない場合、同梱 gzip を自動展開します。
+
+また、`danbooru_tags.csv` がない場合は Hugging Face の `newtextdoc1111/danbooru-tag-csv` から自動で取得します。
 
 取得先:
 

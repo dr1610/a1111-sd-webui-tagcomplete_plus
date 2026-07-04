@@ -1,4 +1,5 @@
 import csv
+import gzip
 import json
 import shutil
 import threading
@@ -22,6 +23,7 @@ HF_DATASET_ID = "newtextdoc1111/danbooru-tag-csv"
 HF_BASE_URL = f"https://huggingface.co/datasets/{HF_DATASET_ID}/resolve/main"
 DANBOORU_TAGS_FILE = "danbooru_tags.csv"
 DANBOORU_COOCCURRENCE_FILE = "danbooru_tags_cooccurrence.csv"
+DANBOORU_COOCCURRENCE_GZ_FILE = f"{DANBOORU_COOCCURRENCE_FILE}.gz"
 RELATED_CACHE = {"mtime": None, "data": {}}
 TAG_COUNT_CACHE = {"mtime": None, "data": {}}
 DOWNLOAD_STATE = {
@@ -59,6 +61,25 @@ def save_meta(meta):
 
 def valid_file(path: Path):
     return path.exists() and path.is_file() and path.stat().st_size > 0
+
+
+def unpack_bundled_cooccurrence():
+    final_path = PLUS_TAGS_PATH.joinpath(DANBOORU_COOCCURRENCE_FILE)
+    gz_path = PLUS_TAGS_PATH.joinpath(DANBOORU_COOCCURRENCE_GZ_FILE)
+    if valid_file(final_path) or not valid_file(gz_path):
+        return False
+
+    tmp_path = PLUS_TAGS_PATH.joinpath(f"{DANBOORU_COOCCURRENCE_FILE}.tmp")
+    if tmp_path.exists():
+        tmp_path.unlink()
+
+    print(f"Tag Autocomplete Plus: unpacking bundled {DANBOORU_COOCCURRENCE_GZ_FILE}")
+    with gzip.open(gz_path, "rb") as source:
+        with tmp_path.open("wb") as target:
+            shutil.copyfileobj(source, target, length=1024 * 1024)
+    shutil.move(tmp_path, final_path)
+    print(f"Tag Autocomplete Plus: unpacked {DANBOORU_COOCCURRENCE_FILE}")
+    return True
 
 
 def download_file(file_name: str, force: bool = False):
@@ -162,6 +183,7 @@ def load_tag_counts():
 
 
 def relation_files():
+    unpack_bundled_cooccurrence()
     if not PLUS_TAGS_PATH.exists():
         return []
 
@@ -322,6 +344,7 @@ script_callbacks.on_app_started(api_tac_plus)
 
 
 def auto_download_on_startup():
+    unpack_bundled_cooccurrence()
     if not bool(getattr(shared.opts, "tacp_autoDownloadDanbooru", True)):
         return
     missing = [
