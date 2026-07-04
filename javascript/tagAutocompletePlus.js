@@ -159,7 +159,20 @@
         panel.style.left = `${Math.max(8, left)}px`;
     }
 
-    function render(area, sourceTag, items) {
+    function emptyMessage(sourceTag, status) {
+        if (status?.downloadRunning) {
+            return `Downloading Danbooru CSV: ${sourceTag}`;
+        }
+        if (status?.downloadError) {
+            return `Danbooru CSV download failed: ${status.downloadError}`;
+        }
+        if (!status?.hasDanbooruCooccurrence && !status?.relationFiles?.length) {
+            return `Danbooru cooccurrence CSV not ready: ${sourceTag}`;
+        }
+        return `No related tags: ${sourceTag}`;
+    }
+
+    function render(area, sourceTag, items, status = null) {
         const panel = ensurePanel();
         state.activeArea = area;
         state.items = items;
@@ -167,7 +180,7 @@
 
         panel.querySelector(".tacp-title").textContent = items.length
             ? `Related: ${sourceTag}`
-            : `No related tags: ${sourceTag}`;
+            : emptyMessage(sourceTag, status);
 
         const list = panel.querySelector(".tacp-list");
         list.textContent = "";
@@ -190,7 +203,7 @@
         if (!tag) return hidePanel();
         const limit = state.config.relatedMaxResults || 24;
         const data = await fetchJson(`tacplusapi/v1/related?tag=${encodeURIComponent(tag)}&limit=${limit}`);
-        render(area, tag, data?.results || []);
+        render(area, tag, data?.results || [], data?.status || state.config?.dataStatus || null);
     }
 
     function hidePanel() {

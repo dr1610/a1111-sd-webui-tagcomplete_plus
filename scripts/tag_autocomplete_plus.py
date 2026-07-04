@@ -176,6 +176,19 @@ def relation_files():
     return sorted({p for p in found if p.is_file()})
 
 
+def data_status():
+    cooccurrence_path = PLUS_TAGS_PATH.joinpath(DANBOORU_COOCCURRENCE_FILE)
+    tags_path = PLUS_TAGS_PATH.joinpath(DANBOORU_TAGS_FILE)
+    files = relation_files()
+    return {
+        "downloadRunning": DOWNLOAD_STATE["running"],
+        "downloadError": DOWNLOAD_STATE["last_error"],
+        "hasDanbooruTags": valid_file(tags_path),
+        "hasDanbooruCooccurrence": valid_file(cooccurrence_path),
+        "relationFiles": [path.name for path in files],
+    }
+
+
 def read_relations():
     files = relation_files()
     mtime = tuple((path.as_posix(), path.stat().st_mtime) for path in files)
@@ -269,6 +282,7 @@ def api_tac_plus(_: gr.Blocks, app: FastAPI):
             "relatedMaxResults": int(getattr(shared.opts, "tacp_relatedMaxResults", 24)),
             "relatedTriggerMode": getattr(shared.opts, "tacp_relatedTriggerMode", "Ctrl+Shift+Space or click"),
             "downloadState": DOWNLOAD_STATE,
+            "dataStatus": data_status(),
         }
 
     @app.get("/tacplusapi/v1/related")
@@ -279,7 +293,7 @@ def api_tac_plus(_: gr.Blocks, app: FastAPI):
 
         relations = read_relations()
         items = relations.get(key, [])[: max(0, min(int(limit), 100))]
-        return {"tag": key, "results": items}
+        return {"tag": key, "results": items, "status": data_status()}
 
     @app.post("/tacplusapi/v1/reload-related")
     async def reload_related():
