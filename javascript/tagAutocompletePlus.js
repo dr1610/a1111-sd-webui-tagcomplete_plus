@@ -244,6 +244,17 @@
         area.focus();
         area.setSelectionRange(caret, caret);
         area.dispatchEvent(new Event("input", { bubbles: true }));
+        state.activeRange = {
+            tag: insert,
+            start: before.length + prefix.length,
+            end: before.length + prefix.length + insert.length,
+            insertAt: caret,
+        };
+    }
+
+    function insertAndChain(area, tag) {
+        insertTag(area, tag);
+        showRelatedForTag(area, tag);
     }
 
     function visibleAutocompleteResults(area) {
@@ -329,7 +340,7 @@
                 button.appendChild(label);
             }
             button.addEventListener("mousedown", (event) => event.preventDefault());
-            button.addEventListener("click", () => insertTag(area, item.tag));
+            button.addEventListener("click", () => insertAndChain(area, item.tag));
             list.appendChild(button);
         });
 
@@ -345,6 +356,11 @@
         if (!tag) return hidePanel();
         state.activeArea = area;
         state.activeRange = tagInfo;
+        showRelatedForTag(area, tag);
+    }
+
+    async function showRelatedForTag(area, tag) {
+        if (!state.config?.enableRelatedTags) return;
         const limit = state.config.relatedMaxResults || 24;
         const data = await fetchJson(`tacplusapi/v1/related?tag=${encodeURIComponent(tag)}&limit=${limit}`);
         render(area, tag, data?.results || [], data?.status || state.config?.dataStatus || null);
@@ -386,7 +402,7 @@
                 moveSelection(-1);
             } else if ((event.key === "Enter" || event.key === "Tab") && state.selectedIndex >= 0) {
                 event.preventDefault();
-                insertTag(area, state.items[state.selectedIndex].tag);
+                insertAndChain(area, state.items[state.selectedIndex].tag);
             }
         });
         area.addEventListener("click", () => {
