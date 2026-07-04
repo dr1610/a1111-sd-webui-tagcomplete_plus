@@ -8,6 +8,8 @@
         selectedIndex: -1,
         items: [],
         outsideClickAttached: false,
+        globalShortcutAttached: false,
+        configPromise: null,
         suppressNextAreaClick: false,
     };
 
@@ -114,11 +116,17 @@
     }
 
     async function loadConfig() {
-        state.config = await fetchJson("tacplusapi/v1/config") || {
-            enableRelatedTags: true,
-            relatedMaxResults: 24,
-            relatedTriggerMode: "Alt+R only",
-        };
+        if (state.configPromise) return state.configPromise;
+        state.configPromise = (async () => {
+            state.config = await fetchJson("tacplusapi/v1/config") || {
+                enableRelatedTags: true,
+                relatedMaxResults: 24,
+                relatedTriggerMode: "Alt+R only",
+            };
+            state.configPromise = null;
+            return state.config;
+        })();
+        return state.configPromise;
     }
 
     function ensureStyle() {
@@ -180,6 +188,12 @@
         return [...appRoot().querySelectorAll("textarea, input[type='text']")];
     }
 
+    function isPromptInput(element) {
+        if (!element) return false;
+        if (element.tagName === "TEXTAREA") return true;
+        return element.tagName === "INPUT" && element.type === "text";
+    }
+
     function clickTriggerEnabled() {
         return state.config?.relatedTriggerMode === "Alt+R or click";
     }
@@ -187,6 +201,22 @@
     function shortcutTrigger(event) {
         return (event.altKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "r") ||
             (event.ctrlKey && event.shiftKey && event.code === "Space");
+    }
+
+    function attachGlobalShortcutHandler() {
+        if (state.globalShortcutAttached) return;
+        state.globalShortcutAttached = true;
+        document.addEventListener("keydown", async (event) => {
+            if (!shortcutTrigger(event)) return;
+            const area = event.target;
+            if (!isPromptInput(area)) return;
+            event.preventDefault();
+            ensureStyle();
+            attachOutsideClickHandler();
+            attach(area);
+            if (!state.config) await loadConfig();
+            showRelated(area);
+        }, true);
     }
 
     function currentTagInfo(area) {
@@ -424,6 +454,7 @@
     async function setup() {
         ensureStyle();
         attachOutsideClickHandler();
+        attachGlobalShortcutHandler();
         if (!state.config) await loadConfig();
         textAreas().forEach(attach);
     }
