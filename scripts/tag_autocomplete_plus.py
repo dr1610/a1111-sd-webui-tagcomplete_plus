@@ -180,11 +180,13 @@ def data_status():
     cooccurrence_path = PLUS_TAGS_PATH.joinpath(DANBOORU_COOCCURRENCE_FILE)
     tags_path = PLUS_TAGS_PATH.joinpath(DANBOORU_TAGS_FILE)
     files = relation_files()
+    non_demo_files = [path for path in files if not path.name.startswith("demo-")]
     return {
         "downloadRunning": DOWNLOAD_STATE["running"],
         "downloadError": DOWNLOAD_STATE["last_error"],
         "hasDanbooruTags": valid_file(tags_path),
         "hasDanbooruCooccurrence": valid_file(cooccurrence_path),
+        "hasOnlyDemoCooccurrence": bool(files) and not non_demo_files and not valid_file(cooccurrence_path),
         "relationFiles": [path.name for path in files],
     }
 

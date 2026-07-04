@@ -166,6 +166,9 @@
         if (status?.downloadError) {
             return `Danbooru CSV download failed: ${status.downloadError}`;
         }
+        if (status?.hasOnlyDemoCooccurrence) {
+            return `Danbooru cooccurrence CSV not downloaded yet: ${sourceTag}`;
+        }
         if (!status?.hasDanbooruCooccurrence && !status?.relationFiles?.length) {
             return `Danbooru cooccurrence CSV not ready: ${sourceTag}`;
         }
