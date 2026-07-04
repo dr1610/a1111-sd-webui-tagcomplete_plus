@@ -197,10 +197,28 @@
         area.dispatchEvent(new Event("input", { bubbles: true }));
     }
 
+    function visibleAutocompleteResults(area) {
+        const areaRect = area.getBoundingClientRect();
+        return [...appRoot().querySelectorAll(".autocompleteResults:not(.sideInfo)")]
+            .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+            .filter(({ element, rect }) => {
+                const style = window.getComputedStyle(element);
+                const horizontallyAligned = rect.right > areaRect.left && rect.left < areaRect.right;
+                return style.display !== "none" &&
+                    style.visibility !== "hidden" &&
+                    rect.width > 0 &&
+                    rect.height > 0 &&
+                    horizontallyAligned;
+            })
+            .sort((a, b) => b.rect.bottom - a.rect.bottom)[0] || null;
+    }
+
     function positionPanel(area) {
         const panel = ensurePanel();
         const rect = area.getBoundingClientRect();
-        const top = window.scrollY + rect.bottom + 6;
+        const autocomplete = visibleAutocompleteResults(area);
+        const bottom = autocomplete ? Math.max(rect.bottom, autocomplete.rect.bottom) : rect.bottom;
+        const top = window.scrollY + bottom + 6;
         const left = Math.min(window.scrollX + rect.left, window.scrollX + document.documentElement.clientWidth - panel.offsetWidth - 16);
         panel.style.top = `${Math.max(8, top)}px`;
         panel.style.left = `${Math.max(8, left)}px`;
