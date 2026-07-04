@@ -26,6 +26,7 @@ DANBOORU_COOCCURRENCE_FILE = "danbooru_tags_cooccurrence.csv"
 DANBOORU_COOCCURRENCE_GZ_FILE = f"{DANBOORU_COOCCURRENCE_FILE}.gz"
 RELATED_CACHE = {"mtime": None, "data": {}}
 TAG_COUNT_CACHE = {"mtime": None, "data": {}}
+TRANSLATION_CACHE = {"mtime": None, "data": {}}
 DOWNLOAD_STATE = {
     "running": False,
     "last_result": None,
@@ -210,6 +211,66 @@ def fallback_tag_matches(query: str, limit: int):
     return sorted(matches, key=lambda item: item["count"], reverse=True)[:limit]
 
 
+def translation_files():
+    candidates = ["danbooru_ja_user.csv", "danbooru-jp.csv"]
+    if bool(getattr(shared.opts, "tacp_useMachineJapaneseLabels", False)):
+        candidates.append("danbooru-machine-jp.csv")
+    candidates.extend([
+        "danbooru_ja.csv",
+        "danbooru_jp.csv",
+        "danbooru_tags_ja.csv",
+        "translations_ja.csv",
+    ])
+    return [PLUS_TAGS_PATH.joinpath(name) for name in candidates if valid_file(PLUS_TAGS_PATH.joinpath(name))]
+
+
+def load_translations():
+    files = translation_files()
+    mtime = tuple((path.as_posix(), path.stat().st_mtime) for path in files)
+    if TRANSLATION_CACHE["mtime"] == mtime:
+        return TRANSLATION_CACHE["data"]
+
+    translations = {}
+    for path in files:
+        try:
+            with path.open("r", encoding="utf-8-sig", newline="") as handle:
+                reader = csv.reader(handle)
+                for row in reader:
+                    if len(row) < 2:
+                        continue
+                    tag = normalize_tag(row[0])
+                    text = ""
+                    for value in reversed(row[1:]):
+                        value = value.strip()
+                        if value:
+                            text = value
+                            break
+                    if not tag or tag in {"tag", "name"} or not text:
+                        continue
+                    translations.setdefault(tag, text)
+        except Exception as exc:
+            print(f"Tag Autocomplete Plus: failed to read {path.name}: {exc}")
+
+    TRANSLATION_CACHE["mtime"] = mtime
+    TRANSLATION_CACHE["data"] = translations
+    if files:
+        print(f"Tag Autocomplete Plus: loaded {len(translations)} Japanese tag labels.")
+    return translations
+
+
+def attach_labels(items):
+    if not bool(getattr(shared.opts, "tacp_showJapaneseLabels", True)):
+        return items
+    translations = load_translations()
+    if not translations:
+        return items
+    for item in items:
+        label = translations.get(item["tag"])
+        if label:
+            item["labelJa"] = label
+    return items
+
+
 def relation_files():
     unpack_bundled_cooccurrence()
     if not PLUS_TAGS_PATH.exists():
@@ -317,6 +378,14 @@ def on_ui_settings():
         shared.OptionInfo(500, "Maximum cached relations per tag", gr.Slider, {"minimum": 50, "maximum": 2000, "step": 50}, section=TACP_SECTION),
     )
     shared.opts.add_option(
+        "tacp_showJapaneseLabels",
+        shared.OptionInfo(True, "Show Japanese labels in related tag panel", section=TACP_SECTION),
+    )
+    shared.opts.add_option(
+        "tacp_useMachineJapaneseLabels",
+        shared.OptionInfo(False, "Use machine-translated Japanese labels when manual labels are missing", section=TACP_SECTION),
+    )
+    shared.opts.add_option(
         "tacp_autoDownloadDanbooru",
         shared.OptionInfo(True, "Download Danbooru CSV automatically when missing", section=TACP_SECTION),
     )
@@ -347,6 +416,7 @@ def api_tac_plus(_: gr.Blocks, app: FastAPI):
         items = relations.get(key, [])[: max(0, min(int(limit), 100))]
         if not items:
             items = fallback_tag_matches(key, max(0, min(int(limit), 100)))
+        items = attach_labels(items)
         return {"tag": key, "results": items, "status": data_status()}
 
     @app.post("/tacplusapi/v1/reload-related")

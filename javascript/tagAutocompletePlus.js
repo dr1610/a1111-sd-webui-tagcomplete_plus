@@ -45,6 +45,10 @@
         gap: 6px;
     }
     .tacp-item {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
         cursor: pointer;
         border: 1px solid var(--button-secondary-border-color, #4b5563);
         border-radius: 5px;
@@ -52,6 +56,12 @@
         background: var(--button-secondary-background-fill, #1f2937);
         color: var(--button-secondary-text-color, #f9fafb);
         white-space: nowrap;
+        text-align: left;
+        line-height: 1.22;
+    }
+    .tacp-main {
+        display: inline-flex;
+        align-items: baseline;
     }
     .tacp-item:hover,
     .tacp-item.selected {
@@ -62,6 +72,15 @@
         margin-left: 5px;
         opacity: 0.68;
         font-size: 11px;
+    }
+    .tacp-ja {
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: inherit;
+        opacity: 0.72;
+        font-size: 11px;
+        font-weight: 400;
     }`;
 
     function appRoot() {
@@ -199,7 +218,29 @@
             const button = document.createElement("button");
             button.type = "button";
             button.className = `tacp-item${index === 0 ? " selected" : ""}`;
-            button.innerHTML = `${visibleTag(item.tag)}${item.count ? `<span class="tacp-count">${item.count}</span>` : ""}`;
+            const main = document.createElement("span");
+            main.className = "tacp-main";
+
+            const tag = document.createElement("span");
+            tag.className = "tacp-tag";
+            tag.textContent = visibleTag(item.tag);
+            main.appendChild(tag);
+
+            if (item.count) {
+                const count = document.createElement("span");
+                count.className = "tacp-count";
+                count.textContent = item.count;
+                main.appendChild(count);
+            }
+
+            button.appendChild(main);
+            if (item.labelJa) {
+                const label = document.createElement("span");
+                label.className = "tacp-ja";
+                label.textContent = item.labelJa;
+                button.title = `${visibleTag(item.tag)}\n${item.labelJa}`;
+                button.appendChild(label);
+            }
             button.addEventListener("mousedown", (event) => event.preventDefault());
             button.addEventListener("click", () => insertTag(area, item.tag));
             list.appendChild(button);
