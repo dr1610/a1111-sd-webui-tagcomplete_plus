@@ -6,6 +6,8 @@
         activeRange: null,
         selectedIndex: -1,
         items: [],
+        outsideClickAttached: false,
+        suppressNextAreaClick: false,
     };
 
     const css = `
@@ -121,7 +123,7 @@
         panel.innerHTML = `
             <div class="tacp-header">
                 <span class="tacp-title"></span>
-                <button class="tacp-close" type="button" title="Close">x</button>
+                <button class="tacp-close" type="button" title="Close">×</button>
             </div>
             <div class="tacp-list"></div>
         `;
@@ -129,6 +131,24 @@
         document.body.appendChild(panel);
         state.panel = panel;
         return panel;
+    }
+
+    function panelIsVisible() {
+        return state.panel && state.panel.style.display !== "none";
+    }
+
+    function attachOutsideClickHandler() {
+        if (state.outsideClickAttached) return;
+        state.outsideClickAttached = true;
+        document.addEventListener("mousedown", (event) => {
+            if (!panelIsVisible()) return;
+            if (state.panel.contains(event.target)) return;
+            hidePanel();
+            state.suppressNextAreaClick = true;
+            setTimeout(() => {
+                state.suppressNextAreaClick = false;
+            }, 0);
+        }, true);
     }
 
     function textAreas() {
@@ -270,7 +290,7 @@
     }
 
     function moveSelection(delta) {
-        if (!state.items.length || !state.panel || state.panel.style.display === "none") return;
+        if (!state.items.length || !panelIsVisible()) return;
         state.selectedIndex = (state.selectedIndex + delta + state.items.length) % state.items.length;
         state.panel.querySelectorAll(".tacp-item").forEach((item, index) => {
             item.classList.toggle("selected", index === state.selectedIndex);
@@ -286,7 +306,7 @@
                 showRelated(area);
                 return;
             }
-            if (!state.panel || state.panel.style.display === "none") return;
+            if (!panelIsVisible()) return;
             if (event.key === "Escape") {
                 event.preventDefault();
                 hidePanel();
@@ -302,6 +322,10 @@
             }
         });
         area.addEventListener("click", () => {
+            if (state.suppressNextAreaClick) {
+                state.suppressNextAreaClick = false;
+                return;
+            }
             if (state.config?.relatedTriggerMode !== "Ctrl+Shift+Space only") {
                 showRelated(area);
             }
@@ -310,6 +334,7 @@
 
     async function setup() {
         ensureStyle();
+        attachOutsideClickHandler();
         if (!state.config) await loadConfig();
         textAreas().forEach(attach);
     }
