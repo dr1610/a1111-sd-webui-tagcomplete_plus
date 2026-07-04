@@ -181,8 +181,7 @@
     }
 
     function clickTriggerEnabled() {
-        return state.config?.relatedTriggerMode === "Alt+R or click" ||
-            state.config?.relatedTriggerMode === "Ctrl+Shift+Space or click";
+        return state.config?.relatedTriggerMode === "Alt+R or click";
     }
 
     function shortcutTrigger(event) {

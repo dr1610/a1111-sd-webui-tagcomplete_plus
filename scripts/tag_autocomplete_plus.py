@@ -395,13 +395,20 @@ def on_ui_settings():
     )
 
 
+def normalized_trigger_mode():
+    mode = getattr(shared.opts, "tacp_relatedTriggerMode", "Alt+R only")
+    if mode in {"Alt+R only", "Alt+R or click"}:
+        return mode
+    return "Alt+R only"
+
+
 def api_tac_plus(_: gr.Blocks, app: FastAPI):
     @app.get("/tacplusapi/v1/config")
     async def config():
         return {
             "enableRelatedTags": bool(getattr(shared.opts, "tacp_enableRelatedTags", True)),
             "relatedMaxResults": int(getattr(shared.opts, "tacp_relatedMaxResults", 24)),
-            "relatedTriggerMode": getattr(shared.opts, "tacp_relatedTriggerMode", "Alt+R only"),
+            "relatedTriggerMode": normalized_trigger_mode(),
             "downloadState": DOWNLOAD_STATE,
             "dataStatus": data_status(),
         }
