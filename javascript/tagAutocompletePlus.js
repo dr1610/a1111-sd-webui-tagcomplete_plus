@@ -182,7 +182,7 @@
         state.selectedIndex = items.length ? 0 : -1;
 
         panel.querySelector(".tacp-title").textContent = items.length
-            ? `Related: ${sourceTag}`
+            ? `${items[0]?.fallback ? "Broader matches" : "Related"}: ${sourceTag}`
             : emptyMessage(sourceTag, status);
 
         const list = panel.querySelector(".tacp-list");

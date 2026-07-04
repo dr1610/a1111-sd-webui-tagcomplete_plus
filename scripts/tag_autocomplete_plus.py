@@ -150,8 +150,16 @@ def normalize_tag(tag: str) -> str:
     return tag.strip().strip('"').replace(" ", "_").lower()
 
 
+def tag_count_path():
+    for file_name in [DANBOORU_TAGS_FILE, "danbooru.csv"]:
+        path = PLUS_TAGS_PATH.joinpath(file_name)
+        if valid_file(path):
+            return path
+    return PLUS_TAGS_PATH.joinpath(DANBOORU_TAGS_FILE)
+
+
 def load_tag_counts():
-    path = PLUS_TAGS_PATH.joinpath(DANBOORU_TAGS_FILE)
+    path = tag_count_path()
     if not valid_file(path):
         return {}
 
@@ -174,12 +182,32 @@ def load_tag_counts():
                 except ValueError:
                     continue
     except Exception as exc:
-        print(f"Tag Autocomplete Plus: failed to read {DANBOORU_TAGS_FILE}: {exc}")
+        print(f"Tag Autocomplete Plus: failed to read {path.name}: {exc}")
 
     TAG_COUNT_CACHE["mtime"] = mtime
     TAG_COUNT_CACHE["data"] = counts
-    print(f"Tag Autocomplete Plus: loaded {len(counts)} Danbooru tag counts.")
+    print(f"Tag Autocomplete Plus: loaded {len(counts)} Danbooru tag counts from {path.name}.")
     return counts
+
+
+def tag_boundary_match(query: str, tag: str):
+    if query == tag:
+        return False
+    return query in tag.split("_")
+
+
+def fallback_tag_matches(query: str, limit: int):
+    counts = load_tag_counts()
+    matches = []
+    for tag, count in counts.items():
+        if tag_boundary_match(query, tag):
+            matches.append({
+                "tag": tag,
+                "count": count,
+                "score": 0,
+                "fallback": True,
+            })
+    return sorted(matches, key=lambda item: item["count"], reverse=True)[:limit]
 
 
 def relation_files():
@@ -317,6 +345,8 @@ def api_tac_plus(_: gr.Blocks, app: FastAPI):
 
         relations = read_relations()
         items = relations.get(key, [])[: max(0, min(int(limit), 100))]
+        if not items:
+            items = fallback_tag_matches(key, max(0, min(int(limit), 100)))
         return {"tag": key, "results": items, "status": data_status()}
 
     @app.post("/tacplusapi/v1/reload-related")
