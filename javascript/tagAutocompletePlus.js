@@ -3,6 +3,7 @@
         config: null,
         panel: null,
         activeArea: null,
+        activeRange: null,
         selectedIndex: -1,
         items: [],
     };
@@ -116,16 +117,22 @@
         return [...appRoot().querySelectorAll("textarea, input[type='text']")];
     }
 
-    function currentTag(area) {
-        const start = area.selectionStart ?? area.value.length;
+    function currentTagInfo(area) {
+        const cursor = area.selectionStart ?? area.value.length;
         const text = area.value;
-        let left = text.lastIndexOf(",", start - 1) + 1;
-        let right = text.indexOf(",", start);
+        let left = text.lastIndexOf(",", cursor - 1) + 1;
+        let right = text.indexOf(",", cursor);
         if (right < 0) right = text.length;
-        return text.slice(left, right)
+        const raw = text.slice(left, right);
+        const leading = raw.match(/^\s*/)?.[0].length || 0;
+        const trailing = raw.match(/\s*$/)?.[0].length || 0;
+        const start = left + leading;
+        const end = right - trailing;
+        const tag = text.slice(start, end)
             .replace(/[()[\]{}]/g, "")
             .replace(/:[0-9.]+/g, "")
             .trim();
+        return { tag, start, end, insertAt: right };
     }
 
     function visibleTag(tag) {
@@ -137,8 +144,9 @@
 
     function insertTag(area, tag) {
         const insert = visibleTag(tag);
-        const start = area.selectionStart ?? area.value.length;
-        const end = area.selectionEnd ?? start;
+        const range = area === state.activeArea ? state.activeRange : null;
+        const start = range?.insertAt ?? area.selectionStart ?? area.value.length;
+        const end = start;
         const before = area.value.slice(0, start);
         const after = area.value.slice(end);
         const prefix = before.length && !/[\s,(]$/.test(before) ? ", " : "";
@@ -192,6 +200,7 @@
             button.type = "button";
             button.className = `tacp-item${index === 0 ? " selected" : ""}`;
             button.innerHTML = `${visibleTag(item.tag)}${item.count ? `<span class="tacp-count">${item.count}</span>` : ""}`;
+            button.addEventListener("mousedown", (event) => event.preventDefault());
             button.addEventListener("click", () => insertTag(area, item.tag));
             list.appendChild(button);
         });
@@ -202,8 +211,11 @@
 
     async function showRelated(area) {
         if (!state.config?.enableRelatedTags) return;
-        const tag = currentTag(area);
+        const tagInfo = currentTagInfo(area);
+        const tag = tagInfo.tag;
         if (!tag) return hidePanel();
+        state.activeArea = area;
+        state.activeRange = tagInfo;
         const limit = state.config.relatedMaxResults || 24;
         const data = await fetchJson(`tacplusapi/v1/related?tag=${encodeURIComponent(tag)}&limit=${limit}`);
         render(area, tag, data?.results || [], data?.status || state.config?.dataStatus || null);
@@ -212,6 +224,7 @@
     function hidePanel() {
         if (state.panel) state.panel.style.display = "none";
         state.items = [];
+        state.activeRange = null;
         state.selectedIndex = -1;
     }
 
