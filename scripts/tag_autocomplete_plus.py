@@ -213,7 +213,7 @@ def fallback_tag_matches(query: str, limit: int):
 
 def translation_files():
     candidates = ["danbooru_ja_user.csv", "danbooru-jp.csv"]
-    if bool(getattr(shared.opts, "tacp_useMachineJapaneseLabels", False)):
+    if bool(getattr(shared.opts, "tacp_useMachineJapaneseLabels", True)):
         candidates.append("danbooru-machine-jp.csv")
     candidates.extend([
         "danbooru_ja.csv",
@@ -383,7 +383,7 @@ def on_ui_settings():
     )
     shared.opts.add_option(
         "tacp_useMachineJapaneseLabels",
-        shared.OptionInfo(False, "Use machine-translated Japanese labels when manual labels are missing", section=TACP_SECTION),
+        shared.OptionInfo(True, "Use machine-translated Japanese labels when manual labels are missing", section=TACP_SECTION),
     )
     shared.opts.add_option(
         "tacp_autoDownloadDanbooru",

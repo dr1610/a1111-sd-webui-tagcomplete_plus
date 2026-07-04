@@ -46,6 +46,8 @@ Settings の `Tag Autocomplete Plus` で次を切り替えられます。
 - `Show Japanese labels in related tag panel`
 - `Use machine-translated Japanese labels when manual labels are missing`
 
+Plus 版では、関連タグパネル、`Ctrl+Shift+Space` 起動、日本語ラベル、機械翻訳補完はいずれも初期状態で有効です。
+
 ユーザー補正を入れたい場合は、`tags/danbooru_ja_user.csv` を作成してください。
 形式は次の通りです。
 
