@@ -2,6 +2,7 @@
     const state = {
         config: null,
         panel: null,
+        hint: null,
         activeArea: null,
         activeRange: null,
         selectedIndex: -1,
@@ -83,6 +84,19 @@
         opacity: 0.72;
         font-size: 11px;
         font-weight: 400;
+    }
+    .tacp-hint {
+        position: absolute;
+        z-index: 9999;
+        display: none;
+        padding: 3px 7px;
+        border: 1px solid var(--block-border-color, #4b5563);
+        border-radius: 5px;
+        background: rgba(17, 24, 39, 0.94);
+        color: var(--body-text-color-subdued, #cbd5e1);
+        font: 11px/1.25 sans-serif;
+        pointer-events: none;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
     }`;
 
     function appRoot() {
@@ -103,7 +117,7 @@
         state.config = await fetchJson("tacplusapi/v1/config") || {
             enableRelatedTags: true,
             relatedMaxResults: 24,
-            relatedTriggerMode: "Ctrl+Shift+Space or click",
+            relatedTriggerMode: "Alt+R only",
         };
     }
 
@@ -133,6 +147,16 @@
         return panel;
     }
 
+    function ensureHint() {
+        if (state.hint) return state.hint;
+        const hint = document.createElement("div");
+        hint.className = "tacp-hint";
+        hint.textContent = "Alt+Rで関連タグ検索";
+        document.body.appendChild(hint);
+        state.hint = hint;
+        return hint;
+    }
+
     function panelIsVisible() {
         return state.panel && state.panel.style.display !== "none";
     }
@@ -156,6 +180,16 @@
         return [...appRoot().querySelectorAll("textarea, input[type='text']")];
     }
 
+    function clickTriggerEnabled() {
+        return state.config?.relatedTriggerMode === "Alt+R or click" ||
+            state.config?.relatedTriggerMode === "Ctrl+Shift+Space or click";
+    }
+
+    function shortcutTrigger(event) {
+        return (event.altKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "r") ||
+            (event.ctrlKey && event.shiftKey && event.code === "Space");
+    }
+
     function currentTagInfo(area) {
         const cursor = area.selectionStart ?? area.value.length;
         const text = area.value;
@@ -172,6 +206,21 @@
             .replace(/:[0-9.]+/g, "")
             .trim();
         return { tag, start, end, insertAt: right };
+    }
+
+    function showHint(area) {
+        if (!state.config?.enableRelatedTags || panelIsVisible()) return;
+        const tagInfo = currentTagInfo(area);
+        if (!tagInfo.tag) return hideHint();
+        const hint = ensureHint();
+        const rect = area.getBoundingClientRect();
+        hint.style.top = `${window.scrollY + rect.bottom + 4}px`;
+        hint.style.left = `${window.scrollX + rect.left + 8}px`;
+        hint.style.display = "block";
+    }
+
+    function hideHint() {
+        if (state.hint) state.hint.style.display = "none";
     }
 
     function visibleTag(tag) {
@@ -285,6 +334,7 @@
         });
 
         panel.style.display = "block";
+        hideHint();
         positionPanel(area);
     }
 
@@ -319,7 +369,7 @@
         if (!area || area.dataset.tacpAttached) return;
         area.dataset.tacpAttached = "true";
         area.addEventListener("keydown", (event) => {
-            if (event.ctrlKey && event.shiftKey && event.code === "Space") {
+            if (shortcutTrigger(event)) {
                 event.preventDefault();
                 showRelated(area);
                 return;
@@ -344,10 +394,16 @@
                 state.suppressNextAreaClick = false;
                 return;
             }
-            if (state.config?.relatedTriggerMode !== "Ctrl+Shift+Space only") {
+            if (clickTriggerEnabled()) {
                 showRelated(area);
+            } else {
+                showHint(area);
             }
         });
+        area.addEventListener("keyup", () => showHint(area));
+        area.addEventListener("mouseup", () => showHint(area));
+        area.addEventListener("focus", () => showHint(area));
+        area.addEventListener("blur", () => setTimeout(hideHint, 120));
     }
 
     async function setup() {

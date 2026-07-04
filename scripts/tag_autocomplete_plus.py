@@ -369,8 +369,8 @@ def on_ui_settings():
     )
     shared.opts.add_option(
         "tacp_relatedTriggerMode",
-        shared.OptionInfo("Ctrl+Shift+Space or click", "Related tag trigger mode", gr.Dropdown, lambda: {
-            "choices": ["Ctrl+Shift+Space or click", "Ctrl+Shift+Space only"]
+        shared.OptionInfo("Alt+R only", "Related tag trigger mode", gr.Dropdown, lambda: {
+            "choices": ["Alt+R only", "Alt+R or click"]
         }, section=TACP_SECTION),
     )
     shared.opts.add_option(
@@ -401,7 +401,7 @@ def api_tac_plus(_: gr.Blocks, app: FastAPI):
         return {
             "enableRelatedTags": bool(getattr(shared.opts, "tacp_enableRelatedTags", True)),
             "relatedMaxResults": int(getattr(shared.opts, "tacp_relatedMaxResults", 24)),
-            "relatedTriggerMode": getattr(shared.opts, "tacp_relatedTriggerMode", "Ctrl+Shift+Space or click"),
+            "relatedTriggerMode": getattr(shared.opts, "tacp_relatedTriggerMode", "Alt+R only"),
             "downloadState": DOWNLOAD_STATE,
             "dataStatus": data_status(),
         }
