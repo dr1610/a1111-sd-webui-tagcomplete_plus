@@ -11,6 +11,8 @@
         globalShortcutAttached: false,
         configPromise: null,
         suppressNextAreaClick: false,
+        history: [],
+        historyIndex: -1,
     };
 
     const css = `
@@ -32,17 +34,37 @@
     .tacp-header {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         gap: 8px;
         margin-bottom: 6px;
         color: var(--body-text-color-subdued, #9ca3af);
         font-size: 12px;
     }
+    .tacp-title {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .tacp-controls {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        flex: 0 0 auto;
+    }
+    .tacp-nav,
     .tacp-close {
         cursor: pointer;
         border: 0;
         background: transparent;
         color: inherit;
         font: inherit;
+        line-height: 1;
+        padding: 2px 4px;
+    }
+    .tacp-nav:disabled {
+        cursor: default;
+        opacity: 0.35;
     }
     .tacp-list {
         display: flex;
@@ -145,10 +167,16 @@
         panel.innerHTML = `
             <div class="tacp-header">
                 <span class="tacp-title"></span>
-                <button class="tacp-close" type="button" title="Close">×</button>
+                <span class="tacp-controls">
+                    <button class="tacp-nav tacp-back" type="button" title="Back">‹</button>
+                    <button class="tacp-nav tacp-forward" type="button" title="Forward">›</button>
+                    <button class="tacp-close" type="button" title="Close">×</button>
+                </span>
             </div>
             <div class="tacp-list"></div>
         `;
+        panel.querySelector(".tacp-back").addEventListener("click", () => navigateHistory(-1));
+        panel.querySelector(".tacp-forward").addEventListener("click", () => navigateHistory(1));
         panel.querySelector(".tacp-close").addEventListener("click", hidePanel);
         document.body.appendChild(panel);
         state.panel = panel;
@@ -211,6 +239,7 @@
             const area = event.target;
             if (!isPromptInput(area)) return;
             event.preventDefault();
+            event.stopPropagation();
             ensureStyle();
             attachOutsideClickHandler();
             attach(area);
@@ -283,7 +312,32 @@
 
     function insertAndChain(area, tag) {
         insertTag(area, tag);
-        showRelatedForTag(area, tag);
+        showRelatedForTag(area, tag, { pushHistory: true });
+    }
+
+    function pushHistory(tag) {
+        if (!tag) return;
+        const current = state.history[state.historyIndex];
+        if (current === tag) return;
+        state.history = state.history.slice(0, state.historyIndex + 1);
+        state.history.push(tag);
+        state.historyIndex = state.history.length - 1;
+    }
+
+    function updateHistoryButtons() {
+        const panel = ensurePanel();
+        const back = panel.querySelector(".tacp-back");
+        const forward = panel.querySelector(".tacp-forward");
+        back.disabled = state.historyIndex <= 0;
+        forward.disabled = state.historyIndex < 0 || state.historyIndex >= state.history.length - 1;
+    }
+
+    function navigateHistory(delta) {
+        if (!state.activeArea) return;
+        const nextIndex = state.historyIndex + delta;
+        if (nextIndex < 0 || nextIndex >= state.history.length) return;
+        state.historyIndex = nextIndex;
+        showRelatedForTag(state.activeArea, state.history[state.historyIndex], { pushHistory: false });
     }
 
     function visibleAutocompleteResults(area) {
@@ -338,6 +392,7 @@
         panel.querySelector(".tacp-title").textContent = items.length
             ? `${items[0]?.fallback ? "Broader matches" : "Related"}: ${sourceTag}`
             : emptyMessage(sourceTag, status);
+        updateHistoryButtons();
 
         const list = panel.querySelector(".tacp-list");
         list.textContent = "";
@@ -385,11 +440,16 @@
         if (!tag) return hidePanel();
         state.activeArea = area;
         state.activeRange = tagInfo;
-        showRelatedForTag(area, tag);
+        state.history = [];
+        state.historyIndex = -1;
+        showRelatedForTag(area, tag, { pushHistory: true });
     }
 
-    async function showRelatedForTag(area, tag) {
+    async function showRelatedForTag(area, tag, options = {}) {
         if (!state.config?.enableRelatedTags) return;
+        if (options.pushHistory) {
+            pushHistory(tag);
+        }
         const limit = state.config.relatedMaxResults || 24;
         const data = await fetchJson(`tacplusapi/v1/related?tag=${encodeURIComponent(tag)}&limit=${limit}`);
         render(area, tag, data?.results || [], data?.status || state.config?.dataStatus || null);
@@ -400,6 +460,8 @@
         state.items = [];
         state.activeRange = null;
         state.selectedIndex = -1;
+        state.history = [];
+        state.historyIndex = -1;
     }
 
     function moveSelection(delta) {
@@ -429,6 +491,12 @@
             } else if (event.key === "ArrowUp") {
                 event.preventDefault();
                 moveSelection(-1);
+            } else if (event.altKey && event.key === "ArrowLeft") {
+                event.preventDefault();
+                navigateHistory(-1);
+            } else if (event.altKey && event.key === "ArrowRight") {
+                event.preventDefault();
+                navigateHistory(1);
             } else if ((event.key === "Enter" || event.key === "Tab") && state.selectedIndex >= 0) {
                 event.preventDefault();
                 insertAndChain(area, state.items[state.selectedIndex].tag);
