@@ -7,12 +7,12 @@ ReForge / Forge / AUTOMATIC1111 WebUI 向けのタグ補完拡張です。
 
 1. このフォルダを WebUI の `extensions/a1111-sd-webui-tagcomplete_plus` に配置します。
 2. WebUI を起動または再起動します。
-3. プロンプト欄で調べたいタグ付近にカーソルを置き、`Alt+R` を押すと関連タグパネルが開きます。
+3. プロンプト欄で調べたいタグ付近にカーソルを置き、`Alt+Q` を押すと関連タグパネルが開きます。
 4. 候補をクリックすると、元のタグの後ろに挿入され、その候補を起点に次の関連タグへ更新されます。
 5. 関連タグパネルの `‹` / `›`、または `Alt+←` / `Alt+→` で連想検索の履歴を戻る/進むできます。
 
-`Alt+R only` モードでは、クリックだけでは関連タグ検索を行いません。
-プロンプト欄にカーソルがある時は、軽いヒントとして `Alt+Rで関連タグ検索` が表示されます。
+`Alt+Q only` モードでは、クリックだけでは関連タグ検索を行いません。
+プロンプト欄にカーソルがある時は、軽いヒントとして `Alt+Qで関連タグ検索` が表示されます。
 
 ## 関連タグデータ
 
@@ -50,7 +50,7 @@ Settings の `Tag Autocomplete Plus` で次を切り替えられます。
 - `Show Japanese labels in related tag panel`
 - `Use machine-translated Japanese labels when manual labels are missing`
 
-Plus 版では、関連タグパネル、`Alt+R` 起動、日本語ラベル、機械翻訳補完はいずれも初期状態で有効です。
+Plus 版では、関連タグパネル、`Alt+Q` 起動、日本語ラベル、機械翻訳補完はいずれも初期状態で有効です。
 
 ユーザー補正を入れたい場合は、`tags/danbooru_ja_user.csv` を作成してください。
 形式は次の通りです。

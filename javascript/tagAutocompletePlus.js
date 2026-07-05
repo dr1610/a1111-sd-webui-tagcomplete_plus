@@ -143,7 +143,7 @@
             state.config = await fetchJson("tacplusapi/v1/config") || {
                 enableRelatedTags: true,
                 relatedMaxResults: 24,
-                relatedTriggerMode: "Alt+R only",
+                relatedTriggerMode: "Alt+Q only",
             };
             state.configPromise = null;
             return state.config;
@@ -187,7 +187,7 @@
         if (state.hint) return state.hint;
         const hint = document.createElement("div");
         hint.className = "tacp-hint";
-        hint.textContent = "Alt+Rで関連タグ検索";
+        hint.textContent = "Alt+Qで関連タグ検索";
         document.body.appendChild(hint);
         state.hint = hint;
         return hint;
@@ -223,11 +223,11 @@
     }
 
     function clickTriggerEnabled() {
-        return state.config?.relatedTriggerMode === "Alt+R or click";
+        return state.config?.relatedTriggerMode === "Alt+Q or click";
     }
 
     function shortcutTrigger(event) {
-        return (event.altKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "r") ||
+        return (event.altKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "q") ||
             (event.ctrlKey && event.shiftKey && event.code === "Space");
     }
 

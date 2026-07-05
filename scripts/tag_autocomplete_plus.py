@@ -369,8 +369,8 @@ def on_ui_settings():
     )
     shared.opts.add_option(
         "tacp_relatedTriggerMode",
-        shared.OptionInfo("Alt+R only", "Related tag trigger mode", gr.Dropdown, lambda: {
-            "choices": ["Alt+R only", "Alt+R or click"]
+        shared.OptionInfo("Alt+Q only", "Related tag trigger mode", gr.Dropdown, lambda: {
+            "choices": ["Alt+Q only", "Alt+Q or click"]
         }, section=TACP_SECTION),
     )
     shared.opts.add_option(
@@ -396,10 +396,14 @@ def on_ui_settings():
 
 
 def normalized_trigger_mode():
-    mode = getattr(shared.opts, "tacp_relatedTriggerMode", "Alt+R only")
-    if mode in {"Alt+R only", "Alt+R or click"}:
+    mode = getattr(shared.opts, "tacp_relatedTriggerMode", "Alt+Q only")
+    if mode == "Alt+R only":
+        return "Alt+Q only"
+    if mode == "Alt+R or click":
+        return "Alt+Q or click"
+    if mode in {"Alt+Q only", "Alt+Q or click"}:
         return mode
-    return "Alt+R only"
+    return "Alt+Q only"
 
 
 def api_tac_plus(_: gr.Blocks, app: FastAPI):
